@@ -3,14 +3,13 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from datetime import datetime
-
 st.set_page_config(page_title='DID Dashboard', layout='wide')
 
------------------------------
+#-----------------------------
 
-THEME + STYLING
+#THEME + STYLING
 
------------------------------
+#-----------------------------
 
 st.markdown("""
 
@@ -52,11 +51,11 @@ h1,h2,h3,h4,p,label {
 .low {background:rgba(0,255,0,0.15);border-left:5px solid green;}
 </style>""", unsafe_allow_html=True)
 
------------------------------
+#-----------------------------
 
-SIDEBAR LOGIN
+#SIDEBAR LOGIN
 
------------------------------
+#-----------------------------
 
 st.sidebar.title('🔐 Login') username = st.sidebar.text_input('Username') password = st.sidebar.text_input('Password', type='password')
 
@@ -64,19 +63,19 @@ if st.sidebar.button('Login'): st.sidebar.success(f'Welcome {username}')
 
 st.sidebar.markdown('---') st.sidebar.write('DID System v1') st.sidebar.write(datetime.now().strftime('%Y-%m-%d'))
 
------------------------------
+#-----------------------------
 
-THEME TOGGLE
+#THEME TOGGLE
 
------------------------------
+#-----------------------------
 
 header1, header2 = st.columns([10,1]) with header2: st.button('🌓')
 
------------------------------
+#-----------------------------
 
-HEADER
+#HEADER
 
------------------------------
+#-----------------------------
 
 st.markdown("""
 
@@ -84,29 +83,30 @@ st.markdown("""
 <h1>🦟 Dengue Intelligent Dashboard (DID)</h1>
 <p>AI-Powered Early Warning System for Sudan</p>
 </div>
-""", unsafe_allow_html=True)-----------------------------
+""", unsafe_allow_html=True)
+#-----------------------------
 
-METRICS
+#METRICS
 
------------------------------
+#-----------------------------
 
 m1,m2,m3,m4 = st.columns(4)
 
 with m1: st.markdown("<div class='metric-box'><h3>Active Cases</h3><h1>338</h1></div>", unsafe_allow_html=True) with m2: st.markdown("<div class='metric-box'><h3>High Risk Areas</h3><h1>5</h1></div>", unsafe_allow_html=True) with m3: st.markdown("<div class='metric-box'><h3>Alerts</h3><h1>12</h1></div>", unsafe_allow_html=True) with m4: st.markdown("<div class='metric-box'><h3>Model Accuracy</h3><h1>89%</h1></div>", unsafe_allow_html=True)
 
------------------------------
+#-----------------------------
 
-MAIN LAYOUT
+#MAIN LAYOUT
 
------------------------------
+#-----------------------------
 
 col1, col2 = st.columns([2,1])
 
------------------------------
+#-----------------------------
 
-INTERACTIVE MAP
+#INTERACTIVE MAP
 
------------------------------
+#-----------------------------
 
 with col1: st.markdown("<div class='glass-card'><h2>🗺 Khartoum Risk Map</h2>", unsafe_allow_html=True)
 
@@ -143,11 +143,11 @@ for name,coords,risk,color in districts:
 st_folium(m, width=850, height=520)
 st.markdown('</div>', unsafe_allow_html=True)
 
------------------------------
+#-----------------------------
 
-ALERTS PANEL
+#ALERTS PANEL
 
------------------------------
+#-----------------------------
 
 with col2: st.markdown("<div class='glass-card'><h2>🚨 Early Warning</h2>", unsafe_allow_html=True)
 
@@ -164,11 +164,11 @@ for level,msg,guide in alerts:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
------------------------------
+#-----------------------------
 
-ANALYSIS TABS
+#ANALYSIS TABS
 
------------------------------
+#-----------------------------
 
 tab1,tab2,tab3 = st.tabs(['📈 Forecast','🌡 Climate','🔍 SHAP'])
 
@@ -178,21 +178,21 @@ with tab2: st.markdown("<div class='glass-card'>", unsafe_allow_html=True) c1,c2
 
 with tab3: st.markdown("<div class='glass-card'>", unsafe_allow_html=True) shap_df = pd.DataFrame({ 'Factor':['Rainfall','Humidity','NDVI','Displacement','Temperature'], 'Importance':[0.42,0.30,0.15,0.09,0.04] }) st.bar_chart(shap_df.set_index('Factor')) st.caption('SHAP explanation for prediction drivers') st.markdown('</div>', unsafe_allow_html=True)
 
------------------------------
+#-----------------------------
 
-PIPELINE STATUS
+#PIPELINE STATUS
 
------------------------------
+#-----------------------------
 
 st.markdown("<div class='glass-card'><h2>⚙ Pipeline Status</h2></div>", unsafe_allow_html=True)
 
 p1,p2,p3,p4 = st.columns(4) p1.success('1️⃣ Ingestion') p2.info('2️⃣ Processing') p3.warning('3️⃣ LSTM Prediction') p4.success('4️⃣ Notifications')
 
------------------------------
+#-----------------------------
 
-FOOTER
+#FOOTER
 
------------------------------
+#-----------------------------
 
 st.markdown("""
 
