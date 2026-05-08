@@ -57,7 +57,9 @@ h1,h2,h3,h4,p,label {
 
 #-----------------------------
 
-st.sidebar.title('🔐 Login') username = st.sidebar.text_input('Username') password = st.sidebar.text_input('Password', type='password')
+st.sidebar.title('🔐 Login') username = 
+st.sidebar.text_input('Username') password = 
+st.sidebar.text_input('Password', type='password')
 
 if st.sidebar.button('Login'): st.sidebar.success(f'Welcome {username}')
 
