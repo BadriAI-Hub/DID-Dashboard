@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import folium
+import json
 
 from streamlit_folium import st_folium
 
@@ -153,7 +154,7 @@ left, right = st.columns([2,1])
 
 
 # ------------------------------------------------
-# MAP
+# INTERACTIVE RISK MAP
 # ------------------------------------------------
 
 with left:
@@ -163,128 +164,260 @@ with left:
         <div class="glass">
 
         <h2>
-            🗺 Khartoum Risk Map
+            🗺 Khartoum Dengue Risk Map
         </h2>
+
+        </div>
         """,
         unsafe_allow_html=True
     )
 
+    # --------------------------------------------
+    # CREATE MAP
+    # --------------------------------------------
+
     m = folium.Map(
+
         location=[15.55, 32.55],
-        zoom_start=8
+
+        zoom_start=8,
+
+        tiles="cartodbpositron"
     )
 
-    districts = [
 
-        (
-            "Khartoum",
-            [15.60, 32.53],
-            "Critical",
-            "red"
-        ),
 
-        (
-            "Omdurman",
-            [15.45, 32.40],
-            "High",
-            "darkred"
-        ),
+    # --------------------------------------------
+    # RISK DATA
+    # --------------------------------------------
 
-        (
-            "Bahri",
-            [15.70, 32.65],
-            "Medium",
-            "orange"
-        ),
+    risk_data = {
 
-        (
-            "Jabal Awliya",
-            [15.20, 32.30],
-            "Low",
-            "green"
-        ),
+        "Khartoum": {
+            "risk": "Critical",
+            "cases": 155,
+            "color": "#ff0000"
+        },
 
-        (
-            "Karari",
-            [15.75, 32.30],
-            "High",
-            "darkred"
-        ),
+        "Omdurman": {
+            "risk": "High",
+            "cases": 120,
+            "color": "#8b0000"
+        },
 
-        (
-            "East Nile",
-            [15.65, 32.75],
-            "Medium",
-            "orange"
-        ),
+        "Bahri": {
+            "risk": "Medium",
+            "cases": 78,
+            "color": "#ff9800"
+        },
 
-        (
-            "Sharg Elneel",
-            [15.80, 32.80],
-            "Low",
-            "green"
+        "Karari": {
+            "risk": "High",
+            "cases": 98,
+            "color": "#b22222"
+        },
+
+        "East Nile": {
+            "risk": "Medium",
+            "cases": 65,
+            "color": "#ffb347"
+        },
+
+        "Jabal Awliya": {
+            "risk": "Low",
+            "cases": 20,
+            "color": "#4caf50"
+        },
+
+        "Sharg Elneel": {
+            "risk": "Low",
+            "cases": 18,
+            "color": "#66bb6a"
+        }
+    }
+
+
+
+    # --------------------------------------------
+    # STYLE FUNCTION
+    # --------------------------------------------
+
+    def style_function(feature):
+
+        district_name = feature["properties"]["name"]
+
+        if district_name in risk_data:
+
+            return {
+
+                "fillColor":
+                risk_data[district_name]["color"],
+
+                "color": "white",
+
+                "weight": 2,
+
+                "fillOpacity": 0.7
+            }
+
+        return {
+
+            "fillColor": "gray",
+
+            "color": "white",
+
+            "weight": 1,
+
+            "fillOpacity": 0.3
+        }
+
+
+
+    # --------------------------------------------
+    # LOAD GEOJSON FILE
+    # --------------------------------------------
+
+    with open(
+        "khartoum_districts.geojson",
+        "r",
+        encoding="utf-8"
+    ) as f:
+
+        geojson_data = json.load(f)
+
+
+
+    # --------------------------------------------
+    # ADD GEOJSON
+    # --------------------------------------------
+
+    folium.GeoJson(
+
+        geojson_data,
+
+        style_function=style_function,
+
+        tooltip=folium.GeoJsonTooltip(
+
+            fields=["name"],
+
+            aliases=["District:"]
         )
-    ]
 
-    # Blue Nile
+    ).add_to(m)
+
+
+
+    # --------------------------------------------
+    # ADD CASE NUMBERS
+    # --------------------------------------------
+
+    district_centers = {
+
+        "Khartoum": [15.60, 32.53],
+
+        "Omdurman": [15.45, 32.40],
+
+        "Bahri": [15.70, 32.65],
+
+        "Karari": [15.75, 32.30],
+
+        "East Nile": [15.65, 32.75],
+
+        "Jabal Awliya": [15.20, 32.30],
+
+        "Sharg Elneel": [15.80, 32.80]
+    }
+
+
+
+    for district, coords in district_centers.items():
+
+        folium.Marker(
+
+            location=coords,
+
+            icon=folium.DivIcon(
+
+                html=f"""
+
+                <div style='
+                    font-size:18px;
+                    font-weight:bold;
+                    color:white;
+                    background:red;
+                    border-radius:50%;
+                    width:35px;
+                    height:35px;
+                    text-align:center;
+                    line-height:35px;
+                    border:2px solid white;
+                '>
+
+                {risk_data[district]['cases']}
+
+                </div>
+                """
+            )
+        ).add_to(m)
+
+
+
+    # --------------------------------------------
+    # BLUE NILE
+    # --------------------------------------------
 
     folium.PolyLine(
+
         [
             [15.9,32.4],
             [15.7,32.5],
             [15.5,32.55]
         ],
+
         color="blue",
+
         weight=6,
+
         tooltip="Blue Nile"
+
     ).add_to(m)
 
-    # White Nile
+
+
+    # --------------------------------------------
+    # WHITE NILE
+    # --------------------------------------------
 
     folium.PolyLine(
+
         [
             [15.9,32.7],
             [15.7,32.6],
             [15.5,32.55]
         ],
+
         color="lightblue",
+
         weight=6,
+
         tooltip="White Nile"
+
     ).add_to(m)
 
-    for district in districts:
 
-        name = district[0]
 
-        coords = district[1]
-
-        risk = district[2]
-
-        color = district[3]
-
-        folium.CircleMarker(
-            location=coords,
-
-            radius=15,
-
-            popup=f"{name} - {risk}",
-
-            color=color,
-
-            fill=True,
-
-            fill_color=color
-        ).add_to(m)
+    # --------------------------------------------
+    # DISPLAY MAP
+    # --------------------------------------------
 
     st_folium(
-        m,
-        width=850,
-        height=500
-    )
 
-    st.markdown(
-        "</div>",
-        unsafe_allow_html=True
+        m,
+
+        width=900,
+
+        height=600
     )
 
 
@@ -365,8 +498,6 @@ with tab1:
             "W6"
         ],
 
-        # Actual dengue cases
-
         "Actual Cases": [
             45,
             72,
@@ -376,8 +507,6 @@ with tab1:
             None
         ],
 
-        # Predicted dengue cases
-
         "Predicted Cases": [
             50,
             75,
@@ -386,8 +515,6 @@ with tab1:
             210,
             260
         ],
-
-        # Climate Variables
 
         "Temperature °C": [
             31,
@@ -416,8 +543,6 @@ with tab1:
             55
         ],
 
-        # Vegetation
-
         "NDVI": [
             0.42,
             0.48,
@@ -426,8 +551,6 @@ with tab1:
             0.66,
             0.72
         ],
-
-        # Environmental Variables
 
         "Flood Risk": [
             1,
@@ -446,8 +569,6 @@ with tab1:
             60,
             82
         ],
-
-        # Humanitarian Variables
 
         "Displacement Camps": [
             4,
@@ -477,22 +598,9 @@ with tab1:
         ]
     )
 
-    st.markdown(
-        "### 🔍 Variables Used in Prediction"
-    )
-
     st.dataframe(
         forecast_df,
         use_container_width=True
-    )
-
-    st.info(
-        """
-        The LSTM model combines climate,
-        environmental,
-        and humanitarian variables
-        to forecast dengue outbreaks.
-        """
     )
 
 
@@ -505,35 +613,30 @@ with tab2:
     c1, c2, c3, c4, c5 = st.columns(5)
 
     with c1:
-
         st.metric(
             "Temperature",
             "34°C"
         )
 
     with c2:
-
         st.metric(
             "Humidity",
             "74%"
         )
 
     with c3:
-
         st.metric(
             "Rainfall",
             "22 mm"
         )
 
     with c4:
-
         st.metric(
             "NDVI",
             "0.61"
         )
 
     with c5:
-
         st.metric(
             "Flood Risk",
             "High"
@@ -571,14 +674,6 @@ with tab3:
         shap_df.set_index("Factor")
     )
 
-    st.info(
-        """
-        SHAP values explain
-        the importance of each variable
-        in LSTM outbreak prediction.
-        """
-    )
-
 
 # ------------------------------------------------
 # PIPELINE STATUS
@@ -600,28 +695,16 @@ st.markdown(
 p1, p2, p3, p4 = st.columns(4)
 
 with p1:
-
-    st.success(
-        "1️⃣ Ingestion"
-    )
+    st.success("1️⃣ Ingestion")
 
 with p2:
-
-    st.info(
-        "2️⃣ Processing"
-    )
+    st.info("2️⃣ Processing")
 
 with p3:
-
-    st.warning(
-        "3️⃣ LSTM Prediction"
-    )
+    st.warning("3️⃣ LSTM")
 
 with p4:
-
-    st.success(
-        "4️⃣ Notifications"
-    )
+    st.success("4️⃣ Notifications")
 
 
 # ------------------------------------------------
@@ -636,9 +719,9 @@ st.markdown(
 
     <p style="color:white;">
 
-        DID Prototype v2
+        DID Prototype v3
         |
-        Streamlit + Folium + LSTM Ready
+        Streamlit + GeoJSON + Folium + LSTM
 
     </p>
 
