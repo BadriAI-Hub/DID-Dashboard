@@ -2,13 +2,14 @@ import streamlit as st
 import pandas as pd
 import folium
 import json
+import random
 
 from streamlit_folium import st_folium
 
 
-# ==================================================
+# =====================================================
 # PAGE CONFIG
-# ==================================================
+# =====================================================
 
 st.set_page_config(
     page_title="DID Dashboard",
@@ -16,9 +17,9 @@ st.set_page_config(
 )
 
 
-# ==================================================
+# =====================================================
 # CUSTOM CSS
-# ==================================================
+# =====================================================
 
 st.markdown(
     """
@@ -57,9 +58,9 @@ st.markdown(
 )
 
 
-# ==================================================
+# =====================================================
 # SIDEBAR
-# ==================================================
+# =====================================================
 
 st.sidebar.title("🔐 Login")
 
@@ -81,13 +82,13 @@ if st.sidebar.button("Login"):
 st.sidebar.markdown("---")
 
 st.sidebar.write(
-    "DID System v3"
+    "Dengue Intelligent Dashboard"
 )
 
 
-# ==================================================
+# =====================================================
 # HEADER
-# ==================================================
+# =====================================================
 
 st.markdown(
     """
@@ -107,9 +108,9 @@ st.markdown(
 )
 
 
-# ==================================================
+# =====================================================
 # METRICS
-# ==================================================
+# =====================================================
 
 m1, m2, m3, m4 = st.columns(4)
 
@@ -122,7 +123,7 @@ with m1:
 with m2:
     st.metric(
         "High Risk Areas",
-        "5"
+        "18"
     )
 
 with m3:
@@ -138,16 +139,16 @@ with m4:
     )
 
 
-# ==================================================
+# =====================================================
 # MAIN LAYOUT
-# ==================================================
+# =====================================================
 
-left, right = st.columns([2,1])
+left, right = st.columns([3,1])
 
 
-# ==================================================
-# MAP
-# ==================================================
+# =====================================================
+# INTERACTIVE SUDAN MAP
+# =====================================================
 
 with left:
 
@@ -156,7 +157,7 @@ with left:
         <div class="glass">
 
         <h2>
-            🗺 Khartoum Risk Map
+            🗺 Sudan Dengue Risk Map
         </h2>
 
         </div>
@@ -164,86 +165,123 @@ with left:
         unsafe_allow_html=True
     )
 
+    # -------------------------------------------------
+    # CREATE MAP
+    # -------------------------------------------------
+
     m = folium.Map(
 
-        location=[15.55, 32.55],
+        location=[15.5, 30.5],
 
-        zoom_start=8,
+        zoom_start=5,
 
         tiles="cartodbpositron"
     )
 
 
 
-    # ==============================================
-    # RISK DATA
-    # ==============================================
+    # -------------------------------------------------
+    # LOAD GEOJSON
+    # -------------------------------------------------
 
-    risk_data = {
+    try:
 
-        "Khartoum": {
-            "risk": "Critical",
-            "cases": 155,
-            "color": "#ff0000"
-        },
+        with open(
+            "sudan_localities.geojson",
+            "r",
+            encoding="utf-8"
+        ) as f:
 
-        "Omdurman": {
-            "risk": "High",
-            "cases": 120,
-            "color": "#8b0000"
-        },
+            geojson_data = json.load(f)
 
-        "Bahri": {
-            "risk": "Medium",
-            "cases": 78,
-            "color": "#ff9800"
-        },
+    except Exception as e:
 
-        "Karari": {
-            "risk": "High",
-            "cases": 98,
-            "color": "#b22222"
-        },
+        st.error(
+            f"GeoJSON Load Error: {e}"
+        )
 
-        "East Nile": {
-            "risk": "Medium",
-            "cases": 65,
-            "color": "#ffb347"
-        },
+        geojson_data = None
 
-        "Jabal Awliya": {
-            "risk": "Low",
-            "cases": 20,
-            "color": "#4caf50"
-        },
 
-        "Sharg Elneel": {
-            "risk": "Low",
-            "cases": 18,
-            "color": "#66bb6a"
-        }
+
+    # -------------------------------------------------
+    # RISK COLORS
+    # -------------------------------------------------
+
+    risk_colors = {
+
+        "Critical": "#ff0000",
+
+        "High": "#b71c1c",
+
+        "Medium": "#ff9800",
+
+        "Low": "#4caf50"
     }
 
 
 
-    # ==============================================
+    # -------------------------------------------------
+    # CREATE DYNAMIC DATA
+    # -------------------------------------------------
+
+    locality_data = {}
+
+    if geojson_data:
+
+        for feature in geojson_data["features"]:
+
+            locality_name = feature["properties"].get(
+                "name",
+                "Unknown"
+            )
+
+            risk = random.choice(
+                [
+                    "Critical",
+                    "High",
+                    "Medium",
+                    "Low"
+                ]
+            )
+
+            cases = random.randint(
+                5,
+                250
+            )
+
+            locality_data[locality_name] = {
+
+                "risk": risk,
+
+                "cases": cases,
+
+                "color": risk_colors[risk]
+            }
+
+
+
+    # -------------------------------------------------
     # STYLE FUNCTION
-    # ==============================================
+    # -------------------------------------------------
 
     def style_function(feature):
 
-        district_name = feature["properties"]["name"]
+        locality_name = feature["properties"].get(
+            "name",
+            "Unknown"
+        )
 
-        if district_name in risk_data:
+        if locality_name in locality_data:
 
             return {
 
                 "fillColor":
-                risk_data[district_name]["color"],
+                locality_data[locality_name]["color"],
 
                 "color": "white",
 
-                "weight": 2,
+                "weight": 1.5,
 
                 "fillOpacity": 0.7
             }
@@ -261,19 +299,26 @@ with left:
 
 
 
-    # ==============================================
-    # LOAD GEOJSON
-    # ==============================================
+    # -------------------------------------------------
+    # TOOLTIP
+    # -------------------------------------------------
 
-    try:
+    tooltip = folium.GeoJsonTooltip(
 
-        with open(
-            "khartoum_districts.geojson",
-            "r",
-            encoding="utf-8"
-        ) as f:
+        fields=["name"],
 
-            geojson_data = json.load(f)
+        aliases=["Locality:"],
+
+        sticky=True
+    )
+
+
+
+    # -------------------------------------------------
+    # ADD GEOJSON
+    # -------------------------------------------------
+
+    if geojson_data:
 
         folium.GeoJson(
 
@@ -281,128 +326,108 @@ with left:
 
             style_function=style_function,
 
-            tooltip=folium.GeoJsonTooltip(
-                fields=["name"],
-                aliases=["District:"]
-            )
-
-        ).add_to(m)
-
-    except:
-
-        st.warning(
-            "GeoJSON file not found."
-        )
-
-
-
-    # ==============================================
-    # DISTRICT NUMBERS
-    # ==============================================
-
-    district_centers = {
-
-        "Khartoum": [15.60, 32.53],
-
-        "Omdurman": [15.45, 32.40],
-
-        "Bahri": [15.70, 32.65],
-
-        "Karari": [15.75, 32.30],
-
-        "East Nile": [15.65, 32.75],
-
-        "Jabal Awliya": [15.20, 32.30],
-
-        "Sharg Elneel": [15.80, 32.80]
-    }
-
-    for district, coords in district_centers.items():
-
-        folium.Marker(
-
-            location=coords,
-
-            icon=folium.DivIcon(
-
-                html=f"""
-                <div style='
-                    font-size:18px;
-                    font-weight:bold;
-                    color:white;
-                    background:red;
-                    border-radius:50%;
-                    width:35px;
-                    height:35px;
-                    text-align:center;
-                    line-height:35px;
-                    border:2px solid white;
-                '>
-
-                {risk_data[district]['cases']}
-
-                </div>
-                """
-            )
+            tooltip=tooltip
 
         ).add_to(m)
 
 
 
-    # ==============================================
-    # BLUE NILE
-    # ==============================================
+    # -------------------------------------------------
+    # ADD CASE LABELS
+    # -------------------------------------------------
 
-    folium.PolyLine(
+    if geojson_data:
 
-        [
-            [15.9, 32.4],
-            [15.7, 32.5],
-            [15.5, 32.55]
-        ],
+        for feature in geojson_data["features"]:
 
-        color="blue",
+            locality_name = feature["properties"].get(
+                "name",
+                "Unknown"
+            )
 
-        weight=6
+            geometry = feature["geometry"]
 
-    ).add_to(m)
+            try:
 
-
-
-    # ==============================================
-    # WHITE NILE
-    # ==============================================
-
-    folium.PolyLine(
-
-        [
-            [15.9, 32.7],
-            [15.7, 32.6],
-            [15.5, 32.55]
-        ],
-
-        color="lightblue",
-
-        weight=6
-
-    ).add_to(m)
+                coords = geometry["coordinates"]
 
 
+                if geometry["type"] == "Polygon":
 
-    # ==============================================
-    # SHOW MAP
-    # ==============================================
+                    first_point = coords[0][0]
+
+                    lon = first_point[0]
+
+                    lat = first_point[1]
+
+
+                elif geometry["type"] == "MultiPolygon":
+
+                    first_point = coords[0][0][0]
+
+                    lon = first_point[0]
+
+                    lat = first_point[1]
+
+
+                else:
+
+                    continue
+
+
+                cases = locality_data[
+                    locality_name
+                ]["cases"]
+
+
+                folium.Marker(
+
+                    location=[lat, lon],
+
+                    icon=folium.DivIcon(
+
+                        html=f"""
+                        <div style='
+                            font-size:14px;
+                            font-weight:bold;
+                            color:white;
+                            background:red;
+                            border-radius:50%;
+                            width:32px;
+                            height:32px;
+                            text-align:center;
+                            line-height:32px;
+                            border:2px solid white;
+                        '>
+
+                        {cases}
+
+                        </div>
+                        """
+                    )
+
+                ).add_to(m)
+
+            except:
+
+                pass
+
+
+
+    # -------------------------------------------------
+    # DISPLAY MAP
+    # -------------------------------------------------
 
     st_folium(
         m,
-        width=900,
-        height=600
+        width=1100,
+        height=700
     )
 
 
-# ==================================================
+# =====================================================
 # ALERTS PANEL
-# ==================================================
+# =====================================================
 
 with right:
 
@@ -420,29 +445,29 @@ with right:
     )
 
     st.error(
-        "Critical outbreak probability in Khartoum"
+        "Critical outbreak probability detected"
     )
 
     st.warning(
-        "High mosquito activity in Omdurman"
-    )
-
-    st.warning(
-        "Flood risk increasing near Nile banks"
-    )
-
-    st.info(
         "Heavy rainfall expected this week"
     )
 
+    st.warning(
+        "Flood risk increasing near Nile areas"
+    )
+
+    st.info(
+        "Mosquito density increased by 23%"
+    )
+
     st.success(
-        "Low risk in Jabal Awliya"
+        "Low risk zones remain stable"
     )
 
 
-# ==================================================
+# =====================================================
 # TABS
-# ==================================================
+# =====================================================
 
 tab1, tab2, tab3 = st.tabs(
     [
@@ -453,11 +478,15 @@ tab1, tab2, tab3 = st.tabs(
 )
 
 
-# ==================================================
+# =====================================================
 # FORECAST TAB
-# ==================================================
+# =====================================================
 
 with tab1:
+
+    st.subheader(
+        "📈 Multi-Variable Dengue Forecast"
+    )
 
     forecast_df = pd.DataFrame({
 
@@ -513,6 +542,33 @@ with tab1:
             30,
             42,
             55
+        ],
+
+        "NDVI": [
+            0.42,
+            0.48,
+            0.53,
+            0.61,
+            0.66,
+            0.72
+        ],
+
+        "Flood Risk": [
+            1,
+            1,
+            2,
+            2,
+            3,
+            3
+        ],
+
+        "Displacement Camps": [
+            4,
+            5,
+            5,
+            6,
+            7,
+            7
         ]
     })
 
@@ -531,13 +587,13 @@ with tab1:
     )
 
 
-# ==================================================
+# =====================================================
 # CLIMATE TAB
-# ==================================================
+# =====================================================
 
 with tab2:
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
 
     with c1:
         st.metric(
@@ -563,10 +619,16 @@ with tab2:
             "0.61"
         )
 
+    with c5:
+        st.metric(
+            "Flood Risk",
+            "High"
+        )
 
-# ==================================================
+
+# =====================================================
 # SHAP TAB
-# ==================================================
+# =====================================================
 
 with tab3:
 
@@ -576,14 +638,18 @@ with tab3:
             "Rainfall",
             "Humidity",
             "NDVI",
+            "Flood Risk",
+            "Displacement",
             "Temperature"
         ],
 
         "Importance": [
             0.42,
             0.30,
-            0.18,
-            0.10
+            0.15,
+            0.08,
+            0.03,
+            0.02
         ]
     })
 
@@ -592,9 +658,9 @@ with tab3:
     )
 
 
-# ==================================================
+# =====================================================
 # PIPELINE STATUS
-# ==================================================
+# =====================================================
 
 st.markdown(
     """
@@ -618,15 +684,15 @@ with p2:
     st.info("2️⃣ Processing")
 
 with p3:
-    st.warning("3️⃣ LSTM")
+    st.warning("3️⃣ LSTM Prediction")
 
 with p4:
     st.success("4️⃣ Notifications")
 
 
-# ==================================================
+# =====================================================
 # FOOTER
-# ==================================================
+# =====================================================
 
 st.markdown(
     """
@@ -636,7 +702,9 @@ st.markdown(
 
     <p style="color:white;">
 
-        DID Prototype v3
+        DID Prototype v4
+        |
+        Sudan GeoJSON + Folium + Streamlit
 
     </p>
 
