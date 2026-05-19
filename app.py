@@ -104,6 +104,23 @@ c2.metric("High Risk", "18")
 c3.metric("Alerts", "12")
 c4.metric("Accuracy", "89%")
 
+# ==========================================
+# STABLE SUDAN MAP
+# ==========================================
+
+st.markdown(
+    """
+    <div class="glass">
+
+    <h2>
+        🗺 Sudan Dengue Risk Map
+    </h2>
+
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # ==========================================
 # LOAD GEOJSON
@@ -127,22 +144,8 @@ except Exception as e:
 
 
 # ==========================================
-# MAP
+# CREATE MAP
 # ==========================================
-
-st.markdown(
-    """
-    <div class="glass">
-
-    <h2>
-        🗺 Sudan Risk Map
-    </h2>
-
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
 
 m = folium.Map(
 
@@ -150,20 +153,113 @@ m = folium.Map(
 
     zoom_start=5,
 
-    tiles="cartodbpositron"
+    tiles="cartodbpositron",
+
+    control_scale=True
 )
 
 
 # ==========================================
-# COLORS
+# ONLY AFFECTED AREAS
 # ==========================================
 
-colors = [
-    "#ff0000",
-    "#8b0000",
-    "#ff9800",
-    "#4caf50"
-]
+affected_areas = {
+
+    "Khartoum": {
+        "risk": "Critical",
+        "cases": 240,
+        "color": "#ff0000"
+    },
+
+    "Bahri": {
+        "risk": "High",
+        "cases": 180,
+        "color": "#b30000"
+    },
+
+    "Omdurman": {
+        "risk": "Medium",
+        "cases": 95,
+        "color": "#ff9800"
+    },
+
+    "Nyala": {
+        "risk": "High",
+        "cases": 150,
+        "color": "#d32f2f"
+    },
+
+    "Port Sudan": {
+        "risk": "Low",
+        "cases": 40,
+        "color": "#4caf50"
+    }
+}
+
+
+# ==========================================
+# STYLE FUNCTION
+# ==========================================
+
+def style_function(feature):
+
+    locality = feature["properties"].get(
+        "name",
+        ""
+    )
+
+    # المناطق المصابة فقط
+    if locality in affected_areas:
+
+        return {
+
+            "fillColor":
+            affected_areas[locality]["color"],
+
+            "color": "white",
+
+            "weight": 1.5,
+
+            "fillOpacity": 0.75
+        }
+
+    # بقية السودان
+    return {
+
+        "fillColor": "#d9d9d9",
+
+        "color": "#888",
+
+        "weight": 0.5,
+
+        "fillOpacity": 0.15
+    }
+
+
+# ==========================================
+# TOOLTIP
+# ==========================================
+
+def tooltip_function(feature):
+
+    locality = feature["properties"].get(
+        "name",
+        "Unknown"
+    )
+
+    if locality in affected_areas:
+
+        risk = affected_areas[locality]["risk"]
+
+        cases = affected_areas[locality]["cases"]
+
+        return f"""
+        <b>{locality}</b><br>
+        Risk: {risk}<br>
+        Cases: {cases}
+        """
+
+    return locality
 
 
 # ==========================================
@@ -172,34 +268,106 @@ colors = [
 
 if geojson_data:
 
+    folium.GeoJson(
+
+        geojson_data,
+
+        style_function=style_function,
+
+        tooltip=folium.GeoJsonTooltip(
+
+            fields=["name"],
+
+            aliases=["Locality:"]
+        )
+
+    ).add_to(m)
+
+
+# ==========================================
+# ADD CASE LABELS
+# ==========================================
+
+if geojson_data:
+
     for feature in geojson_data["features"]:
+
+        locality = feature["properties"].get(
+            "name",
+            ""
+        )
+
+        # فقط المناطق المصابة
+        if locality not in affected_areas:
+
+            continue
+
 
         try:
 
-            locality_name = feature["properties"].get(
-                "name",
-                "Unknown"
-            )
+            geometry = feature["geometry"]
 
-            color = random.choice(colors)
+            coords = geometry["coordinates"]
 
-            folium.GeoJson(
 
-                feature,
+            if geometry["type"] == "Polygon":
 
-                style_function=lambda x,
-                color=color: {
+                point = coords[0][0]
 
-                    "fillColor": color,
+                lon = point[0]
 
-                    "color": "white",
+                lat = point[1]
 
-                    "weight": 1,
 
-                    "fillOpacity": 0.6
-                },
+            elif geometry["type"] == "MultiPolygon":
 
-                tooltip=locality_name
+                point = coords[0][0][0]
+
+                lon = point[0]
+
+                lat = point[1]
+
+            else:
+
+                continue
+
+
+            cases = affected_areas[
+                locality
+            ]["cases"]
+
+
+            color = affected_areas[
+                locality
+            ]["color"]
+
+
+            folium.Marker(
+
+                location=[lat, lon],
+
+                icon=folium.DivIcon(
+
+                    html=f"""
+                    <div style='
+                        font-size:14px;
+                        font-weight:bold;
+                        color:white;
+                        background:{color};
+                        border-radius:50%;
+                        width:34px;
+                        height:34px;
+                        text-align:center;
+                        line-height:34px;
+                        border:2px solid white;
+                        box-shadow:0 0 10px rgba(0,0,0,0.4);
+                    '>
+
+                    {cases}
+
+                    </div>
+                    """
+                )
 
             ).add_to(m)
 
@@ -213,12 +381,15 @@ if geojson_data:
 # ==========================================
 
 st_folium(
+
     m,
-    width=1200,
-    height=700
+
+    width="100%",
+
+    height=700,
+
+    returned_objects=[]
 )
-
-
 # ==========================================
 # ALERTS
 # ==========================================
