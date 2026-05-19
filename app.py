@@ -1,6 +1,7 @@
 import streamlit as st
 import folium
 import json
+import random
 import pandas as pd
 
 from streamlit_folium import folium_static
@@ -17,7 +18,7 @@ st.set_page_config(
 
 
 # =====================================================
-# CSS
+# CUSTOM CSS
 # =====================================================
 
 st.markdown("""
@@ -32,7 +33,7 @@ st.markdown("""
     );
 }
 
-h1,h2,h3,h4,p{
+h1,h2,h3,h4,p,label{
     color:white !important;
 }
 
@@ -48,6 +49,12 @@ h1,h2,h3,h4,p{
     margin-bottom:20px;
 }
 
+[data-testid="metric-container"]{
+    background: rgba(255,255,255,0.08);
+    border-radius:15px;
+    padding:15px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,14 +65,26 @@ h1,h2,h3,h4,p{
 
 st.sidebar.title("🔐 Login")
 
-st.sidebar.text_input("Username")
+username = st.sidebar.text_input(
+    "Username"
+)
 
-st.sidebar.text_input(
+password = st.sidebar.text_input(
     "Password",
     type="password"
 )
 
-st.sidebar.button("Login")
+if st.sidebar.button("Login"):
+
+    st.sidebar.success(
+        f"Welcome {username}"
+    )
+
+st.sidebar.markdown("---")
+
+st.sidebar.write(
+    "DID Early Warning System"
+)
 
 
 # =====================================================
@@ -76,11 +95,11 @@ st.markdown("""
 <div class="glass">
 
 <h1>
-🦟 Sudan Dengue Dashboard
+🦟 Sudan Dengue Intelligence Dashboard
 </h1>
 
 <p>
-AI Early Warning System
+AI-Powered Early Warning & Climate Surveillance System
 </p>
 
 </div>
@@ -91,32 +110,39 @@ AI Early Warning System
 # METRICS
 # =====================================================
 
-c1, c2, c3, c4 = st.columns(4)
+m1, m2, m3, m4 = st.columns(4)
 
-c1.metric("Cases", "338")
-c2.metric("High Risk", "18")
-c3.metric("Alerts", "12")
-c4.metric("Accuracy", "89%")
+with m1:
+    st.metric("Active Cases", "338")
+
+with m2:
+    st.metric("High Risk Areas", "18")
+
+with m3:
+    st.metric("Alerts", "12")
+
+with m4:
+    st.metric("Model Accuracy", "89%")
 
 
 # =====================================================
-# MAP
+# MAP SECTION
 # =====================================================
 
 st.markdown("""
 <div class="glass">
 
 <h2>
-🗺 Sudan Risk Map
+🗺 Sudan Dengue Risk Map
 </h2>
 
 </div>
 """, unsafe_allow_html=True)
 
 
-# -----------------------------------------------------
+# =====================================================
 # CREATE MAP
-# -----------------------------------------------------
+# =====================================================
 
 m = folium.Map(
 
@@ -128,9 +154,9 @@ m = folium.Map(
 )
 
 
-# -----------------------------------------------------
+# =====================================================
 # LOAD GEOJSON
-# -----------------------------------------------------
+# =====================================================
 
 geojson_data = None
 
@@ -149,27 +175,11 @@ except Exception as e:
     st.error(f"GeoJSON Error: {e}")
 
 
-# -----------------------------------------------------
-# ONLY AFFECTED AREAS
-# -----------------------------------------------------
+# =====================================================
+# GENERATE RISK DATA
+# =====================================================
 
-affected_areas = {
-
-    "Khartoum": "#ff0000",
-
-    "Bahri": "#b30000",
-
-    "Omdurman": "#ff9800",
-
-    "Nyala": "#d32f2f",
-
-    "Port Sudan": "#4caf50"
-}
-
-
-# -----------------------------------------------------
-# DRAW FEATURES SAFELY
-# -----------------------------------------------------
+risk_data = {}
 
 if geojson_data:
 
@@ -177,62 +187,140 @@ if geojson_data:
 
         try:
 
-            locality = feature["properties"].get(
-                "name",
+            properties = feature.get(
+                "properties",
+                {}
+            )
+
+            # -----------------------------------------
+            # IMPORTANT:
+            # change NAME_2 if needed
+            # -----------------------------------------
+
+            locality = properties.get(
+                "NAME_2",
                 ""
             )
 
-            # affected only
-            if locality in affected_areas:
+            risk = random.choice([
+                "Critical",
+                "High",
+                "Medium",
+                "Low",
+                "None"
+            ])
 
-                color = affected_areas[locality]
+            if risk == "Critical":
 
-                folium.GeoJson(
+                color = "#ff0000"
 
-                    feature,
+            elif risk == "High":
 
-                    style_function=lambda x,
-                    color=color: {
+                color = "#b30000"
 
-                        "fillColor": color,
+            elif risk == "Medium":
 
-                        "color": "white",
+                color = "#ff9800"
 
-                        "weight": 1,
+            elif risk == "Low":
 
-                        "fillOpacity": 0.7
-                    }
+                color = "#4caf50"
 
-                ).add_to(m)
-
-            # other areas
             else:
 
-                folium.GeoJson(
+                color = "#d9d9d9"
 
-                    feature,
+            cases = random.randint(
+                5,
+                250
+            )
 
-                    style_function=lambda x: {
+            risk_data[locality] = {
 
-                        "fillColor": "#d9d9d9",
+                "risk": risk,
 
-                        "color": "#999",
+                "color": color,
 
-                        "weight": 0.4,
-
-                        "fillOpacity": 0.1
-                    }
-
-                ).add_to(m)
+                "cases": cases
+            }
 
         except:
 
             pass
 
 
-# -----------------------------------------------------
+# =====================================================
+# DRAW FEATURES
+# =====================================================
+
+if geojson_data:
+
+    for feature in geojson_data["features"]:
+
+        try:
+
+            properties = feature.get(
+                "properties",
+                {}
+            )
+
+            locality = properties.get(
+                "NAME_2",
+                ""
+            )
+
+            risk_info = risk_data.get(
+                locality,
+                {}
+            )
+
+            color = risk_info.get(
+                "color",
+                "#d9d9d9"
+            )
+
+            risk_level = risk_info.get(
+                "risk",
+                "None"
+            )
+
+            cases = risk_info.get(
+                "cases",
+                0
+            )
+
+            folium.GeoJson(
+
+                feature,
+
+                style_function=lambda x,
+                color=color: {
+
+                    "fillColor": color,
+
+                    "color": "white",
+
+                    "weight": 1,
+
+                    "fillOpacity": 0.7
+                },
+
+                tooltip=f"""
+                {locality}
+                | Risk: {risk_level}
+                | Cases: {cases}
+                """
+
+            ).add_to(m)
+
+        except:
+
+            pass
+
+
+# =====================================================
 # SHOW MAP
-# -----------------------------------------------------
+# =====================================================
 
 folium_static(
     m,
@@ -255,105 +343,210 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.error("Critical outbreak probability detected")
-st.warning("Heavy rainfall expected")
-st.warning("Flood risk increasing")
-st.info("Mosquito density increased")
-st.success("Low risk areas stable")
+st.error(
+    "Critical outbreak probability detected"
+)
 
+st.warning(
+    "Heavy rainfall expected"
+)
 
-# =====================================================
-# FORECAST
-# =====================================================
+st.warning(
+    "Flood risk increasing"
+)
 
-st.markdown("""
-<div class="glass">
+st.info(
+    "Mosquito density increased"
+)
 
-<h2>
-📈 Forecast
-</h2>
-
-</div>
-""", unsafe_allow_html=True)
-
-forecast_df = pd.DataFrame({
-
-    "Week": [
-        "W1",
-        "W2",
-        "W3",
-        "W4"
-    ],
-
-    "Predicted Cases": [
-        55,
-        120,
-        180,
-        260
-    ]
-})
-
-st.line_chart(
-    forecast_df.set_index("Week")
+st.success(
+    "Low risk areas stable"
 )
 
 
 # =====================================================
-# CLIMATE
+# TABS
+# =====================================================
+
+tab1, tab2, tab3 = st.tabs([
+    "📈 Forecast",
+    "🌡 Climate",
+    "🔍 SHAP"
+])
+
+
+# =====================================================
+# FORECAST TAB
+# =====================================================
+
+with tab1:
+
+    st.subheader(
+        "📈 Multi-Variable Forecast"
+    )
+
+    forecast_df = pd.DataFrame({
+
+        "Week": [
+            "W1",
+            "W2",
+            "W3",
+            "W4",
+            "W5",
+            "W6"
+        ],
+
+        "Actual Cases": [
+            45,
+            72,
+            118,
+            155,
+            None,
+            None
+        ],
+
+        "Predicted Cases": [
+            50,
+            75,
+            120,
+            165,
+            210,
+            260
+        ],
+
+        "Temperature": [
+            31,
+            32,
+            34,
+            35,
+            36,
+            37
+        ],
+
+        "Humidity": [
+            68,
+            70,
+            74,
+            78,
+            80,
+            83
+        ],
+
+        "Rainfall": [
+            12,
+            18,
+            25,
+            30,
+            42,
+            55
+        ],
+
+        "NDVI": [
+            0.42,
+            0.48,
+            0.53,
+            0.61,
+            0.66,
+            0.72
+        ]
+    })
+
+    st.line_chart(
+        forecast_df.set_index("Week")[
+            [
+                "Actual Cases",
+                "Predicted Cases"
+            ]
+        ]
+    )
+
+    st.dataframe(
+        forecast_df,
+        use_container_width=True
+    )
+
+
+# =====================================================
+# CLIMATE TAB
+# =====================================================
+
+with tab2:
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+
+    with c1:
+        st.metric("Temperature", "34°C")
+
+    with c2:
+        st.metric("Humidity", "74%")
+
+    with c3:
+        st.metric("Rainfall", "22 mm")
+
+    with c4:
+        st.metric("NDVI", "0.61")
+
+    with c5:
+        st.metric("Flood Risk", "High")
+
+
+# =====================================================
+# SHAP TAB
+# =====================================================
+
+with tab3:
+
+    shap_df = pd.DataFrame({
+
+        "Factor": [
+            "Rainfall",
+            "Humidity",
+            "NDVI",
+            "Flood Risk",
+            "Temperature"
+        ],
+
+        "Importance": [
+            0.42,
+            0.30,
+            0.15,
+            0.08,
+            0.05
+        ]
+    })
+
+    st.bar_chart(
+        shap_df.set_index("Factor")
+    )
+
+
+# =====================================================
+# PIPELINE STATUS
 # =====================================================
 
 st.markdown("""
 <div class="glass">
 
 <h2>
-🌡 Climate Indicators
+⚙ Pipeline Status
 </h2>
 
 </div>
 """, unsafe_allow_html=True)
 
-cc1, cc2, cc3, cc4 = st.columns(4)
+p1, p2, p3, p4 = st.columns(4)
 
-cc1.metric("Temperature", "34°C")
-cc2.metric("Humidity", "74%")
-cc3.metric("Rainfall", "22mm")
-cc4.metric("NDVI", "0.61")
+with p1:
+    st.success("1️⃣ Ingestion")
 
+with p2:
+    st.info("2️⃣ Processing")
 
-# =====================================================
-# SHAP
-# =====================================================
+with p3:
+    st.warning("3️⃣ LSTM Prediction")
 
-st.markdown("""
-<div class="glass">
-
-<h2>
-🔍 SHAP Analysis
-</h2>
-
-</div>
-""", unsafe_allow_html=True)
-
-shap_df = pd.DataFrame({
-
-    "Factor": [
-        "Rainfall",
-        "Humidity",
-        "NDVI",
-        "Flood Risk"
-    ],
-
-    "Importance": [
-        0.42,
-        0.31,
-        0.18,
-        0.09
-    ]
-})
-
-st.bar_chart(
-    shap_df.set_index("Factor")
-)
+with p4:
+    st.success("4️⃣ Notifications")
 
 
 # =====================================================
@@ -368,6 +561,8 @@ st.markdown("""
 <p style='color:white;'>
 
 DID Prototype Stable Version
+|
+Sudan GeoJSON + Streamlit + Folium
 
 </p>
 
